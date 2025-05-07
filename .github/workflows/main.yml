@@ -1,0 +1,35 @@
+name: Logging solution deployment pipeline
+
+on: [workflow_dispatch]
+
+env:
+  ManagementGroupPrefix : "abl"
+  ManagementSubscriptionId : "4ea53d6b-7dd0-454c-964f-e8bfbe19c294"
+
+jobs:
+  bicep_tenant_deploy:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          enable-AzPSSession: true
+
+      - name: Deploy Azure Resource Manager (ARM) Template
+        uses: Azure/arm-deploy@v2
+        with:
+          scope: "resourcegroup"
+          subscriptionId: '${{ env.ManagementSubscriptionId }}'
+          region: eastus
+          resourceGroupName: rg-${{ env.ManagementGroupPrefix }}-logging-001 
+          template: logging/logging.bicep
+          deploymentMode: incremental
+          deploymentName: -join ('alz-LoggingDeploy-{0}' -f (Get-Date -Format 'yyyyMMddTHHMMssffffZ'))[0..63]
+          parameters: logging/parameters/logging.parameters.all.json
+          failOnStdErr: false    
+          
